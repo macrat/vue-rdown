@@ -1,0 +1,78 @@
+<script src=https://unpkg.com/vue></script>
+<script src=https://unpkg.com/axios/dist/axios.min.js></script>
+<script src=https://unpkg.com/lodash></script>
+<script src=https://unpkg.com/vue-codemirror-lite/dist/vuecodemirror.min.js></script>
+<script>
+window.CodeMirror = VueCodeMirror.CodeMirror;
+</script>
+<script src=https://codemirror.net/addon/mode/overlay.js></script>
+<script src=https://codemirror.net/mode/markdown/markdown.js></script>
+<script src=https://codemirror.net/mode/gfm/gfm.js></script>
+<script src=https://codemirror.net/mode/r/r.js></script>
+<script src=https://codemirror.net/mode/python/python.js></script>
+
+<style>
+body {
+    margin: 0;
+}
+
+main {
+	display: flex;
+}
+
+main > div {
+	cursor: text;
+}
+
+main > iframe {
+	border: none;
+	border-left: 1px solid gray;
+}
+
+main > * {
+    display: inline-block;
+	flex: 1 1 0;
+    height: 100%;
+}
+
+.CodeMirror {
+	height: auto;
+}
+</style>
+
+<main>
+    <codemirror v-model='rmd' :options='{mode: "gfm"}'></codemirror>
+    <iframe :src=html></iframe>
+</main>
+
+<script>
+Vue.use(VueCodeMirror);
+
+const vm = new Vue({
+    el: 'main',
+    data: {
+        rmd: '',
+        html: '',
+    },
+	computed: {
+		update() {
+			return _.debounce(() => {
+				axios.post('/render', this.rmd, {headers: {'Content-Type': 'text/markdown'}}).then(x => {
+					const reader = new FileReader();
+					reader.onload = () => this.html = reader.result;
+					console.log(x.data.log);
+					reader.readAsDataURL(new Blob([x.data.html], {type: 'text/html'}));
+				});
+			}, 500);
+		},
+	},
+    watch: {
+        rmd() {
+			this.update();
+        },
+    },
+    mounted() {
+        this.rmd = '---\ntitle: hello world\n---\n';
+    },
+});
+</script>
